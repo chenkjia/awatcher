@@ -1,0 +1,27 @@
+{
+  "mongodb": {
+    "host": "localhost",
+    "port": 27017,
+    "db_name": "alib",
+    "username": "",
+    "password": "",
+    "connection_pool_size": 10,
+    "max_retry_attempts": 3,
+    "retry_delay_seconds": 5
+  },
+  "baostock": {
+    "login_user": "anonymous",
+    "login_password": "123456"
+  },
+  "data_update": {
+    "stock_list_update_frequency_days": 7,
+    "daily_data_update_frequency_days": 1,
+    "hourly_data_update_frequency_days": 1,
+    "adjust_factor_update_frequency_days": 7
+  },
+  "logging": {
+    "level": "INFO",
+    "file_path": "logs/awatcher.log",
+    "rotation": "10 MB"
+  }
+}

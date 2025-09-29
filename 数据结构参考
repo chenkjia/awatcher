@@ -1,0 +1,38 @@
+{
+    // 添加索引配置
+    code: { type: String, required: true, unique: true, index: true },
+    'dayLine.time': { type: String, required: true, index: true },
+    'hourLine.time': { type: String, required: true, index: true },
+    name: { type: String, required: true, index: true },
+    market: { type: String, required: true },
+    isFocused: { type: Boolean, default: false, index: true }, // 是否重点关注
+    isHourFocused: { type: Boolean, default: false, index: true }, // 是否小时线重点关注
+    focusedDays: { type: Number, default: 0, index: true }, // 日线连续关注天数
+    hourFocusedDays: { type: Number, default: 0, index: true }, // 小时线连续关注天数
+    isStar: { type: Boolean, default: false, index: true }, // 是否星标股票
+    adjustFactor: [{
+      time: Date,
+      foreAdjustFactor: Number,
+      backAdjustFactor: Number,
+      adjustFactor: Number
+    }],
+    dayLine: [{
+        time: Date,
+        open: Number,
+        high: Number,
+        low: Number,
+        close: Number,
+        volume: Number,
+        amount: Number
+    }],
+    hourLine: [{
+        time: Date,
+        open: Number,
+        high: Number,
+        low: Number,
+        close: Number,
+        volume: Number,
+        amount: Number
+    }],
+
+}

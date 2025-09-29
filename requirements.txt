@@ -1,0 +1,5 @@
+baostock>=0.8.8
+pymongo>=4.3.3
+python-dotenv>=1.0.0
+pytest>=7.3.1
+loguru>=0.7.0
