@@ -41,9 +41,9 @@ class StockProcessor:
                 
             # 如果数据库中已有日线数据且未指定开始日期，则从最后一条日线数据的日期开始获取
             if not start_date and stock.get('dayLine') and len(stock['dayLine']) > 0:
-                # 获取最后一条日线数据的日期，并将日期加1天作为开始日期
+                # 获取最后一条日线数据的日期
                 last_date = stock['dayLine'][-1]['time']
-                start_date = (last_date + timedelta(days=1)).strftime('%Y-%m-%d')
+                start_date = (last_date).strftime('%Y-%m-%d')
                 logger.info(f"从最后一条日线数据日期 {last_date.strftime('%Y-%m-%d')} 后开始获取新数据")
             
             # 如果未指定日期，默认获取最近一年的数据
@@ -90,6 +90,27 @@ class StockProcessor:
     def process_hourly_data(code, start_date=None, end_date=None):
         """处理股票小时线数据并保存到数据库"""
         try:
+            # 检查股票是否存在
+            stock = StockModel.get_stock_by_code(code)
+            if not stock:
+                logger.warning(f"股票 {code} 不存在，无法保存小时数据")
+                return 0
+                
+            # 如果数据库中已有小时线数据且未指定开始日期，则从最后一条小时线数据的日期开始获取
+            if not start_date and stock.get('hourLine') and len(stock['hourLine']) > 0:
+                # 获取最后一条小时线数据的日期
+                last_date = stock['hourLine'][-1]['time']
+                start_date = (last_date).strftime('%Y-%m-%d')
+                logger.info(f"从最后一条小时线数据日期 {last_date.strftime('%Y-%m-%d')} 后开始获取新数据")
+            
+            # 如果未指定日期，默认获取最近一年的数据
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            # 如果开始日期大于结束日期，则此股票已是最新数据
+            if start_date and end_date and start_date > end_date:
+                logger.info(f"股票 {code} 的小时线数据已是最新，无需更新")
+                return 0
+
             # 获取股票小时线数据
             baostock_client = BaostockClient()
             hourly_data = baostock_client.get_hourly_k_data(code, start_date, end_date)
@@ -99,10 +120,20 @@ class StockProcessor:
             if not stock:
                 logger.warning(f"股票 {code} 不存在，无法保存小时线数据")
                 return 0
-            
-            # 保存到数据库
-            for data in hourly_data:
-                StockModel.update_hour_line(code, data)
+            if start_date:
+                # 如果指定了开始日期，逐条更新数据
+                for data in hourly_data:
+                    StockModel.update_hour_line(code, data)
+            else:
+                # 如果没有指定开始日期，批量插入数据
+                if hourly_data:
+                    mongo_client = MongoClient()
+                    mongo_client.update_one(
+                        StockModel.COLLECTION_NAME,
+                        {'code': code},
+                        {'$set': {'hourLine': hourly_data}}
+                    )
+                    logger.info(f"批量更新股票 {code} 的小时线数据，共 {len(hourly_data)} 条记录")
             
             logger.info(f"成功处理并保存股票 {code} 的 {len(hourly_data)} 条小时线数据")
             return len(hourly_data)

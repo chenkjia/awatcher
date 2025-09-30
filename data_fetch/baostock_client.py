@@ -123,11 +123,8 @@ class BaostockClient:
         """获取股票小时K线数据"""
         cls._login()
         
-        # 如果未指定日期，默认获取最近30天的数据
-        if not end_date:
-            end_date = datetime.now().strftime('%Y-%m-%d')
         if not start_date:
-            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            start_date = '1990-01-01'
         
         logger.info(f"正在获取股票 {code} 的小时K线数据 ({start_date} 至 {end_date})...")
         
@@ -148,16 +145,22 @@ class BaostockClient:
         hourly_data = []
         while (rs.next()):
             data = rs.get_row_data()
-            k_data = {
-                'time': datetime.strptime(f"{data[0]} {data[1]}", '%Y-%m-%d %H:%M:%S'),
-                'open': float(data[2]) if data[2] else 0,
-                'high': float(data[3]) if data[3] else 0,
-                'low': float(data[4]) if data[4] else 0,
-                'close': float(data[5]) if data[5] else 0,
-                'volume': float(data[6]) if data[6] else 0,
-                'amount': float(data[7]) if data[7] else 0
-            }
-            hourly_data.append(k_data)
+            # 打印原始数据，查看格式
+            logger.debug(f"小时线原始数据: {data}")
+            try:
+                time_obj = datetime.strptime(data[1], '%Y%m%d%H%M%S000')
+                k_data = {
+                    'time': time_obj,
+                    'open': float(data[2]) if data[2] else 0,
+                    'high': float(data[3]) if data[3] else 0,
+                    'low': float(data[4]) if data[4] else 0,
+                    'close': float(data[5]) if data[5] else 0,
+                    'volume': float(data[6]) if data[6] else 0,
+                    'amount': float(data[7]) if data[7] else 0
+                }
+                hourly_data.append(k_data)
+            except Exception as e:
+                logger.error(f"处理小时线数据时出错: {e}, 数据: {data}")
         
         logger.info(f"成功获取股票 {code} 的 {len(hourly_data)} 条小时K线数据")
         return hourly_data
