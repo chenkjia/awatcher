@@ -62,17 +62,20 @@ class BaostockClient:
         stock_list = []
         while (rs.next()):
             data = rs.get_row_data()
-            stock = {
-                'code': data[0],
-                'name': data[1],
-                'market': data[4],
-                'isFocused': False,
-                'isHourFocused': False,
-                'focusedDays': 0,
-                'hourFocusedDays': 0,
-                'isStar': False
-            }
-            stock_list.append(stock)
+            # 只获取股票，不包含指数、基金等
+            # data[0]是股票代码，data[4]是市场类型，data[5]是证券类型
+            if len(data) > 5 and data[5] == '1':  # 1表示股票
+                stock = {
+                    'code': data[0],
+                    'name': data[1],
+                    'market': data[4],
+                    'isFocused': False,
+                    'isHourFocused': False,
+                    'focusedDays': 0,
+                    'hourFocusedDays': 0,
+                    'isStar': False
+                }
+                stock_list.append(stock)
         
         logger.info(f"成功获取 {len(stock_list)} 只股票的基本信息")
         return stock_list
