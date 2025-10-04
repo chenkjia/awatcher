@@ -177,7 +177,7 @@ class BaostockClient:
         if not end_date:
             end_date = datetime.now().strftime('%Y-%m-%d')
         if not start_date:
-            start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+            start_date = '1990-01-01'
         
         logger.info(f"正在获取股票 {code} 的复权因子数据 ({start_date} 至 {end_date})...")
         
