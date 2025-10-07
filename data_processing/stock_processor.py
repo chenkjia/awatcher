@@ -155,11 +155,18 @@ class StockProcessor:
                 logger.warning(f"股票 {code} 不存在，无法保存复权因子数据")
                 return 0
             
-            # 保存到数据库
-            for data in adjust_factor_data:
-                StockModel.update_adjust_factor(code, data)
+            # 如果读取到复权因子数据，先删除原来的复权因子数据，然后批量更新
+            if adjust_factor_data:
+                # 先删除原来的复权因子数据
+                StockModel.clear_adjust_factor(code)
+                logger.info(f"已清除股票 {code} 的原有复权因子数据")
+                
+                # 批量更新新的复权因子数据
+                StockModel.batch_update_adjust_factor(code, adjust_factor_data)
+                logger.info(f"成功批量更新股票 {code} 的 {len(adjust_factor_data)} 条复权因子数据")
+            else:
+                logger.info(f"股票 {code} 未获取到复权因子数据")
             
-            logger.info(f"成功处理并保存股票 {code} 的 {len(adjust_factor_data)} 条复权因子数据")
             return len(adjust_factor_data)
         except Exception as e:
             logger.error(f"处理股票 {code} 复权因子数据失败: {e}")

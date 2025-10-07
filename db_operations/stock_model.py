@@ -169,6 +169,28 @@ class StockModel:
             logger.debug(f"添加股票复权因子: {code}, 日期: {adjust_factor_data['time']}")
     
     @classmethod
+    def clear_adjust_factor(cls, code):
+        """清除股票的所有复权因子数据"""
+        mongo_client = MongoClient()
+        mongo_client.update_one(
+            cls.COLLECTION_NAME,
+            {'code': code},
+            {'$unset': {'adjustFactor': ""}}
+        )
+        logger.debug(f"清除股票 {code} 的所有复权因子数据")
+    
+    @classmethod
+    def batch_update_adjust_factor(cls, code, adjust_factor_list):
+        """批量更新股票复权因子数据"""
+        mongo_client = MongoClient()
+        mongo_client.update_one(
+            cls.COLLECTION_NAME,
+            {'code': code},
+            {'$set': {'adjustFactor': adjust_factor_list}}
+        )
+        logger.debug(f"批量更新股票 {code} 的复权因子数据，共 {len(adjust_factor_list)} 条")
+    
+    @classmethod
     def get_stock_by_code(cls, code):
         """根据股票代码获取股票信息"""
         mongo_client = MongoClient()
