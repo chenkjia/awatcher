@@ -11,12 +11,16 @@ class StockProcessor:
     """股票数据处理类，提供数据处理和转换功能"""
     
     @staticmethod
-    def process_stock_list():
+    def process_stock_list(limit=None):
         """处理股票列表数据并保存到数据库"""
         try:
             # 获取股票列表
             baostock_client = BaostockClient()
             stock_list = baostock_client.get_stock_list()
+            if limit is not None:
+                if limit <= 0:
+                    raise ValueError("limit 必须大于 0")
+                stock_list = stock_list[:limit]
             
             # 保存到数据库
             for stock in stock_list:
@@ -26,6 +30,43 @@ class StockProcessor:
             return len(stock_list)
         except Exception as e:
             logger.error(f"处理股票列表数据失败: {e}")
+            raise
+
+    @staticmethod
+    def process_add_stocks(codes):
+        """按股票代码批量添加股票基本信息"""
+        try:
+            normalized_codes = []
+            code_set = set()
+            for code in codes:
+                normalized_code = code.strip()
+                if normalized_code and normalized_code not in code_set:
+                    code_set.add(normalized_code)
+                    normalized_codes.append(normalized_code)
+            if not normalized_codes:
+                raise ValueError("股票代码列表不能为空")
+
+            baostock_client = BaostockClient()
+            stock_list = baostock_client.get_stock_list()
+            stock_map = {stock['code']: stock for stock in stock_list}
+
+            added_count = 0
+            missing_codes = []
+            for code in normalized_codes:
+                stock_data = stock_map.get(code)
+                if not stock_data:
+                    missing_codes.append(code)
+                    continue
+                StockModel.save_stock(stock_data)
+                added_count += 1
+
+            return {
+                'added_count': added_count,
+                'requested_count': len(normalized_codes),
+                'missing_codes': missing_codes
+            }
+        except Exception as e:
+            logger.error(f"批量添加股票失败: {e}")
             raise
     
     @staticmethod

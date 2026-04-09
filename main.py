@@ -20,10 +20,10 @@ def setup_indexes():
         logger.error(f"设置数据库索引失败: {e}")
         sys.exit(1)
 
-def update_stock_list():
+def update_stock_list(limit=None):
     """更新股票列表"""
     try:
-        count = StockProcessor.process_stock_list()
+        count = StockProcessor.process_stock_list(limit)
         logger.info(f"股票列表更新完成，共处理 {count} 只股票")
     except Exception as e:
         logger.error(f"更新股票列表失败: {e}")
@@ -39,6 +39,36 @@ def get_codes_from_file(file_path):
     except Exception as e:
         logger.error(f"读取文件 {file_path} 失败: {e}")
         return []
+
+def parse_codes(raw_codes):
+    """解析股票代码输入"""
+    if not raw_codes:
+        return []
+    parsed_codes = []
+    for raw_code in raw_codes:
+        code_items = raw_code.split(',')
+        for code in code_items:
+            normalized_code = code.strip()
+            if normalized_code:
+                parsed_codes.append(normalized_code)
+    return parsed_codes
+
+def add_stocks(raw_codes=None, file_path=None):
+    """批量添加新股票到列表"""
+    try:
+        if file_path:
+            codes = get_codes_from_file(file_path)
+        else:
+            codes = parse_codes(raw_codes)
+        result = StockProcessor.process_add_stocks(codes)
+        logger.info(
+            f"批量添加股票完成，请求 {result['requested_count']} 只，成功 {result['added_count']} 只"
+        )
+        if result['missing_codes']:
+            logger.warning(f"以下股票代码未找到，跳过: {', '.join(result['missing_codes'])}")
+    except Exception as e:
+        logger.error(f"批量添加股票失败: {e}")
+        sys.exit(1)
 
 def update_daily_data(code=None, file_path=None, start_date=None, end_date=None):
     """更新日线数据"""
@@ -138,6 +168,12 @@ def main():
     
     # 股票列表更新命令
     stock_list_parser = subparsers.add_parser('update-stock-list', help='更新股票列表')
+    stock_list_parser.add_argument('--limit', type=int, help='限制更新股票数量，例如 10')
+
+    # 股票列表新增命令
+    add_stocks_parser = subparsers.add_parser('add-stocks', help='批量添加新股票到列表')
+    add_stocks_parser.add_argument('--codes', nargs='+', help='股票代码列表，支持空格或逗号分隔')
+    add_stocks_parser.add_argument('--file', help='包含股票代码的文件路径')
     
     # 日线数据更新命令
     daily_parser = subparsers.add_parser('update-daily', help='更新日线数据')
@@ -169,7 +205,9 @@ def main():
     try:
         # 根据命令执行相应操作
         if args.command == 'update-stock-list':
-            update_stock_list()
+            update_stock_list(args.limit)
+        elif args.command == 'add-stocks':
+            add_stocks(args.codes, args.file)
         elif args.command == 'update-daily':
             update_daily_data(args.code, args.file, args.start_date, args.end_date)
         elif args.command == 'update-hourly':

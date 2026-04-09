@@ -217,3 +217,14 @@ class StockModel:
         if result and result[0].get('dayLine') and len(result[0]['dayLine']) > 0:
             return result[0]['dayLine'][0]['time']
         return None
+
+    @classmethod
+    def update_tags(cls, code, tags):
+        """更新股票标签"""
+        mongo_client = MongoClient()
+        mongo_client.update_one(
+            cls.COLLECTION_NAME,
+            {'code': code},
+            {'$set': {'tags': tags}}
+        )
+        logger.debug(f"更新股票标签: {code}, 标签: {tags}")
