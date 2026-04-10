@@ -78,18 +78,20 @@ def update_daily_data(code=None, file_path=None, start_date=None, end_date=None)
             count = StockProcessor.process_daily_data(code, start_date, end_date)
             logger.info(f"股票 {code} 日线数据更新完成，共处理 {count} 条记录")
         elif file_path:
-            # 从文件更新股票列表
             codes = get_codes_from_file(file_path)
             total_count = 0
-            for stock_code in codes:
+            total_stocks = len(codes)
+            for index, stock_code in enumerate(codes, start=1):
+                logger.info(f"日线更新进度 [{index}/{total_stocks}] 开始处理 {stock_code}")
                 count = StockProcessor.process_daily_data(stock_code, start_date, end_date)
                 total_count += count
             logger.info(f"指定列表股票日线数据更新完成，共处理 {total_count} 条记录")
         else:
-            # 更新所有股票
             stocks = StockModel.get_all_stocks(projection={'code': 1})
             total_count = 0
-            for stock in stocks:
+            total_stocks = len(stocks)
+            for index, stock in enumerate(stocks, start=1):
+                logger.info(f"日线更新进度 [{index}/{total_stocks}] 开始处理 {stock['code']}")
                 count = StockProcessor.process_daily_data(stock['code'], start_date, end_date)
                 total_count += count
             logger.info(f"所有股票日线数据更新完成，共处理 {total_count} 条记录")
@@ -105,18 +107,20 @@ def update_hourly_data(code=None, file_path=None, start_date=None, end_date=None
             count = StockProcessor.process_hourly_data(code, start_date, end_date)
             logger.info(f"股票 {code} 小时线数据更新完成，共处理 {count} 条记录")
         elif file_path:
-            # 从文件更新股票列表
             codes = get_codes_from_file(file_path)
             total_count = 0
-            for stock_code in codes:
+            total_stocks = len(codes)
+            for index, stock_code in enumerate(codes, start=1):
+                logger.info(f"小时线更新进度 [{index}/{total_stocks}] 开始处理 {stock_code}")
                 count = StockProcessor.process_hourly_data(stock_code, start_date, end_date)
                 total_count += count
             logger.info(f"指定列表股票小时线数据更新完成，共处理 {total_count} 条记录")
         else:
-            # 更新所有股票
             stocks = StockModel.get_all_stocks(projection={'code': 1})
             total_count = 0
-            for stock in stocks:
+            total_stocks = len(stocks)
+            for index, stock in enumerate(stocks, start=1):
+                logger.info(f"小时线更新进度 [{index}/{total_stocks}] 开始处理 {stock['code']}")
                 count = StockProcessor.process_hourly_data(stock['code'], start_date, end_date)
                 total_count += count
             logger.info(f"所有股票小时线数据更新完成，共处理 {total_count} 条记录")

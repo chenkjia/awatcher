@@ -80,16 +80,21 @@ class StockProcessor:
                 logger.warning(f"股票 {code} 不存在，无法保存日线数据")
                 return 0
                 
+            # 如果未指定日期，默认获取到今天
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+
             # 如果数据库中已有日线数据且未指定开始日期，则从最后一条日线数据的日期开始获取
             if not start_date and stock.get('dayLine') and len(stock['dayLine']) > 0:
                 # 获取最后一条日线数据的日期
                 last_date = stock['dayLine'][-1]['time']
+                last_date_str = last_date.strftime('%Y-%m-%d')
+                if last_date_str >= end_date:
+                    logger.info(f"股票 {code} 的日线最后日期为 {last_date_str}，已是最新，无需拉取")
+                    return 0
                 start_date = (last_date).strftime('%Y-%m-%d')
                 logger.info(f"从最后一条日线数据日期 {last_date.strftime('%Y-%m-%d')} 后开始获取新数据")
-            
-            # 如果未指定日期，默认获取最近一年的数据
-            if not end_date:
-                end_date = datetime.now().strftime('%Y-%m-%d')
+
             # 如果开始日期大于结束日期，则此股票已是最新数据
             if start_date and end_date and start_date > end_date:
                 logger.info(f"股票 {code} 的日线数据已是最新，无需更新")
@@ -137,16 +142,21 @@ class StockProcessor:
                 logger.warning(f"股票 {code} 不存在，无法保存小时数据")
                 return 0
                 
+            # 如果未指定日期，默认获取到今天
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+
             # 如果数据库中已有小时线数据且未指定开始日期，则从最后一条小时线数据的日期开始获取
             if not start_date and stock.get('hourLine') and len(stock['hourLine']) > 0:
                 # 获取最后一条小时线数据的日期
                 last_date = stock['hourLine'][-1]['time']
+                last_date_str = last_date.strftime('%Y-%m-%d')
+                if last_date_str >= end_date:
+                    logger.info(f"股票 {code} 的小时线最后日期为 {last_date_str}，已是最新，无需拉取")
+                    return 0
                 start_date = (last_date).strftime('%Y-%m-%d')
                 logger.info(f"从最后一条小时线数据日期 {last_date.strftime('%Y-%m-%d')} 后开始获取新数据")
-            
-            # 如果未指定日期，默认获取最近一年的数据
-            if not end_date:
-                end_date = datetime.now().strftime('%Y-%m-%d')
+
             # 如果开始日期大于结束日期，则此股票已是最新数据
             if start_date and end_date and start_date > end_date:
                 logger.info(f"股票 {code} 的小时线数据已是最新，无需更新")
