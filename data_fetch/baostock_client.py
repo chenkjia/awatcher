@@ -3,6 +3,7 @@ BaoStock API客户端模块，提供股票数据获取功能
 """
 import baostock as bs
 from datetime import datetime, timedelta
+import time
 
 from utils.logger import logger
 from config import config
@@ -12,6 +13,7 @@ class BaostockClient:
     
     _instance = None
     _is_logged_in = False
+    _preferred_server_host = "public-api.baostock.com"
     
     def __new__(cls):
         if cls._instance is None:
@@ -21,23 +23,64 @@ class BaostockClient:
     
     @classmethod
     def _login(cls):
-        """登录BaoStock"""
+        """登录BaoStock（兼容旧版地址并增加重试）"""
         if cls._is_logged_in:
             return
-        
+
+        cls._patch_server_host_if_needed()
+
         baostock_config = config.get_baostock_config()
         user = baostock_config.get('login_user', 'anonymous')
         password = baostock_config.get('login_password', '123456')
-        
-        logger.info("正在登录BaoStock...")
-        result = bs.login(user_id=user, password=password)
-        
-        if result.error_code != '0':
-            logger.error(f"BaoStock登录失败: {result.error_msg}")
-            raise ConnectionError(f"BaoStock登录失败: {result.error_msg}")
-        
-        cls._is_logged_in = True
-        logger.info("BaoStock登录成功")
+        max_retry = 3
+        retry_delay = 2
+        last_error = None
+
+        for retry in range(1, max_retry + 1):
+            logger.info(f"正在登录BaoStock... (第 {retry}/{max_retry} 次)")
+            try:
+                result = bs.login(user_id=user, password=password)
+                if result.error_code == '0':
+                    cls._is_logged_in = True
+                    logger.info("BaoStock登录成功")
+                    return
+                last_error = result.error_msg
+                logger.error(f"BaoStock登录失败: {result.error_msg}")
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"BaoStock登录异常: {e}")
+
+            # 清理连接状态，避免残留坏连接影响重试
+            try:
+                bs.logout()
+            except Exception:
+                pass
+            cls._is_logged_in = False
+
+            if retry < max_retry:
+                logger.info(f"等待 {retry_delay} 秒后重试...")
+                time.sleep(retry_delay)
+
+        raise ConnectionError(f"BaoStock登录失败，重试 {max_retry} 次后仍失败: {last_error}")
+
+    @classmethod
+    def _patch_server_host_if_needed(cls):
+        """
+        兼容旧版 baostock 的默认服务器地址。
+        旧版本默认使用 www.baostock.com，当前应使用 public-api.baostock.com。
+        """
+        try:
+            import baostock.common.contants as bs_constants
+        except Exception as e:
+            logger.warning(f"无法读取baostock服务端配置，继续使用默认配置: {e}")
+            return
+
+        current_host = getattr(bs_constants, "BAOSTOCK_SERVER_IP", "")
+        if current_host != cls._preferred_server_host:
+            logger.warning(
+                f"检测到BaoStock默认地址为 {current_host}，自动切换为 {cls._preferred_server_host}"
+            )
+            setattr(bs_constants, "BAOSTOCK_SERVER_IP", cls._preferred_server_host)
     
     @classmethod
     def logout(cls):
