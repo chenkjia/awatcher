@@ -4,6 +4,12 @@ python main.py init
 # 更新股票列表
 python main.py update-stock-list
 
+# 清空所有股票记录
+python main.py clear-stocks
+
+# 从文件列表添加股票到数据库
+python main.py add-stocks --file list.txt
+
 # 更新指定股票的日线数据
 python main.py update-daily --code sh.600000
 

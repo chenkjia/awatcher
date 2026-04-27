@@ -201,7 +201,14 @@ class StockModel:
         """获取所有股票列表"""
         mongo_client = MongoClient()
         return mongo_client.find(cls.COLLECTION_NAME, query, projection)
-    
+
+    @classmethod
+    def clear_all_stocks(cls):
+        """清空所有股票记录"""
+        mongo_client = MongoClient()
+        result = mongo_client.delete_many(cls.COLLECTION_NAME, {})
+        return result.deleted_count
+
     @classmethod
     def get_latest_trading_date(cls):
         """获取最新交易日期"""
