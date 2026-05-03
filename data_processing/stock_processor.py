@@ -68,6 +68,28 @@ class StockProcessor:
         except Exception as e:
             logger.error(f"批量添加股票失败: {e}")
             raise
+
+    @staticmethod
+    def process_cleanup_unwanted_stocks():
+        """
+        清理不需要的标的:
+        1) 科创板: sh.688xxx
+        2) 指数/基金等非股票类型（兼容历史数据中 market 被误存为 type 的情况）
+        """
+        try:
+            cleanup_query = {
+                '$or': [
+                    {'code': {'$regex': '^sh\\.688'}},
+                    {'securityType': {'$exists': True, '$ne': '1'}},
+                    {'securityType': {'$exists': False}, 'market': {'$in': ['2', '3', '4', '5', '6', '7', '8', '9']}}
+                ]
+            }
+            deleted_count = StockModel.delete_stocks_by_query(cleanup_query)
+            logger.info(f"清理完成，删除 {deleted_count} 条科创板/指数/基金等非目标股票数据")
+            return deleted_count
+        except Exception as e:
+            logger.error(f"清理不需要的股票数据失败: {e}")
+            raise
     
     @staticmethod
     def process_daily_data(code, start_date=None, end_date=None):

@@ -105,13 +105,24 @@ class BaostockClient:
         stock_list = []
         while (rs.next()):
             data = rs.get_row_data()
-            # 只获取股票，不包含指数、基金等
-            # data[0]是股票代码，data[4]是市场类型，data[5]是证券类型
-            if len(data) > 5 and data[5] == '1':  # 1表示股票
+            # query_stock_basic 返回字段:
+            # code, code_name, ipoDate, outDate, type, status
+            # type='1' 为股票；status='1' 为上市状态
+            if len(data) > 5:
+                code = data[0]
+                stock_type = data[4]
+                status = data[5]
+                if stock_type != '1' or status != '1':
+                    continue
+                # 排除科创板（sh.688xxx）
+                if code.startswith('sh.688'):
+                    continue
+                market = code.split('.')[0]
                 stock = {
-                    'code': data[0],
+                    'code': code,
                     'name': data[1],
-                    'market': data[4],
+                    'market': market,
+                    'securityType': stock_type,
                     'isFocused': False,
                     'isHourFocused': False,
                     'focusedDays': 0,

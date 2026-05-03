@@ -24,9 +24,19 @@ def update_stock_list(limit=None):
     """更新股票列表"""
     try:
         count = StockProcessor.process_stock_list(limit)
-        logger.info(f"股票列表更新完成，共处理 {count} 只股票")
+        deleted_count = StockProcessor.process_cleanup_unwanted_stocks()
+        logger.info(f"股票列表更新完成，共处理 {count} 只股票，并清理 {deleted_count} 条非目标标的")
     except Exception as e:
         logger.error(f"更新股票列表失败: {e}")
+        sys.exit(1)
+
+def cleanup_stock_pool():
+    """清理科创板、指数、基金等非目标标的"""
+    try:
+        deleted_count = StockProcessor.process_cleanup_unwanted_stocks()
+        logger.info(f"清理完成，共删除 {deleted_count} 条记录")
+    except Exception as e:
+        logger.error(f"清理股票池失败: {e}")
         sys.exit(1)
 
 def get_codes_from_file(file_path):
@@ -178,6 +188,9 @@ def main():
     add_stocks_parser = subparsers.add_parser('add-stocks', help='批量添加新股票到列表')
     add_stocks_parser.add_argument('--codes', nargs='+', help='股票代码列表，支持空格或逗号分隔')
     add_stocks_parser.add_argument('--file', help='包含股票代码的文件路径')
+
+    # 清理股票池命令
+    subparsers.add_parser('cleanup-stock-pool', help='清理科创板、指数、基金等非目标标的')
     
     # 日线数据更新命令
     daily_parser = subparsers.add_parser('update-daily', help='更新日线数据')
@@ -212,6 +225,8 @@ def main():
             update_stock_list(args.limit)
         elif args.command == 'add-stocks':
             add_stocks(args.codes, args.file)
+        elif args.command == 'cleanup-stock-pool':
+            cleanup_stock_pool()
         elif args.command == 'update-daily':
             update_daily_data(args.code, args.file, args.start_date, args.end_date)
         elif args.command == 'update-hourly':
