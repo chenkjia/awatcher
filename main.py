@@ -37,6 +37,14 @@ def cleanup_stock_pool():
         logger.info(f"清理完成，共删除 {deleted_count} 条记录")
     except Exception as e:
         logger.error(f"清理股票池失败: {e}")
+
+def clear_stocks():
+    """清空所有股票记录"""
+    try:
+        count = StockModel.clear_all_stocks()
+        logger.info(f"已清空 {count} 条股票记录")
+    except Exception as e:
+        logger.error(f"清空股票记录失败: {e}")
         sys.exit(1)
 
 def get_codes_from_file(file_path):
@@ -237,7 +245,10 @@ def main():
     
     # 初始化命令
     init_parser = subparsers.add_parser('init', help='初始化数据库')
-    
+
+    # 清空股票列表命令
+    clear_parser = subparsers.add_parser('clear-stocks', help='清空所有股票记录')
+
     # 解析命令行参数
     args = parser.parse_args()
     
@@ -260,6 +271,8 @@ def main():
         elif args.command == 'init':
             setup_indexes()
             logger.info("数据库初始化完成")
+        elif args.command == 'clear-stocks':
+            clear_stocks()
         else:
             parser.print_help()
     finally:
