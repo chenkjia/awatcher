@@ -209,6 +209,16 @@ class StockModel:
         deleted_count = mongo_client.delete_many(cls.COLLECTION_NAME, query)
         logger.info(f"按条件删除股票完成，删除 {deleted_count} 条")
         return deleted_count
+
+    @classmethod
+    def delete_stocks_by_codes(cls, codes):
+        """按股票代码列表删除股票"""
+        if not codes:
+            return 0
+        mongo_client = MongoClient()
+        deleted_count = mongo_client.delete_many(cls.COLLECTION_NAME, {'code': {'$in': list(codes)}})
+        logger.info(f"按代码删除股票完成，删除 {deleted_count} 条")
+        return deleted_count
     
     @classmethod
     def get_latest_trading_date(cls):

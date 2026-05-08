@@ -14,6 +14,29 @@ class BaostockClient:
     _instance = None
     _is_logged_in = False
     _preferred_server_host = "public-api.baostock.com"
+
+    @staticmethod
+    def _is_st_name(name):
+        upper_name = (name or "").upper()
+        return (
+            upper_name.startswith('ST')
+            or upper_name.startswith('*ST')
+            or upper_name.startswith('S*ST')
+            or upper_name.startswith('SST')
+        )
+
+    @classmethod
+    def _is_excluded_stock(cls, code, stock_type, status, name):
+        # 非股票、非上市、科创板、北交所、ST 均排除
+        if stock_type != '1' or status != '1':
+            return True
+        if code.startswith('sh.688'):
+            return True
+        if code.startswith('bj.'):
+            return True
+        if cls._is_st_name(name):
+            return True
+        return False
     
     def __new__(cls):
         if cls._instance is None:
@@ -112,10 +135,8 @@ class BaostockClient:
                 code = data[0]
                 stock_type = data[4]
                 status = data[5]
-                if stock_type != '1' or status != '1':
-                    continue
-                # 排除科创板（sh.688xxx）
-                if code.startswith('sh.688'):
+                name = data[1]
+                if cls._is_excluded_stock(code, stock_type, status, name):
                     continue
                 market = code.split('.')[0]
                 stock = {
@@ -133,6 +154,31 @@ class BaostockClient:
         
         logger.info(f"成功获取 {len(stock_list)} 只股票的基本信息")
         return stock_list
+
+    @classmethod
+    def get_excluded_stock_codes(cls):
+        """
+        获取当前应被排除的股票代码集合。
+        用于清理历史存量中“已变更为 ST 但旧名称未更新”的记录。
+        """
+        cls._login()
+        rs = bs.query_stock_basic()
+        if rs.error_code != '0':
+            raise Exception(f"获取股票列表失败: {rs.error_msg}")
+
+        excluded_codes = set()
+        while rs.next():
+            data = rs.get_row_data()
+            if len(data) <= 5:
+                continue
+            code = data[0]
+            name = data[1]
+            stock_type = data[4]
+            status = data[5]
+            if cls._is_excluded_stock(code, stock_type, status, name):
+                excluded_codes.add(code)
+        logger.info(f"识别出 {len(excluded_codes)} 条应排除股票代码")
+        return excluded_codes
     
     @classmethod
     def get_daily_k_data(cls, code, start_date=None, end_date=None):

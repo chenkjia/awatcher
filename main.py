@@ -165,6 +165,18 @@ def update_adjust_factor(code=None, file_path=None, start_date=None, end_date=No
         logger.error(f"更新复权因子数据失败: {e}")
         sys.exit(1)
 
+def cleanup_and_update_daily_adjust(code=None, file_path=None, start_date=None, end_date=None):
+    """清理股票池后，串行更新日线和复权因子"""
+    try:
+        logger.info("开始执行整合任务：清理股票池 -> 更新日线 -> 更新复权因子")
+        cleanup_stock_pool()
+        update_daily_data(code, file_path, start_date, end_date)
+        update_adjust_factor(code, file_path, start_date, end_date)
+        logger.info("整合任务执行完成")
+    except Exception as e:
+        logger.error(f"执行整合任务失败: {e}")
+        sys.exit(1)
+
 def cleanup():
     """清理资源"""
     try:
@@ -212,6 +224,16 @@ def main():
     adjust_parser.add_argument('--file', help='包含股票代码的文件路径')
     adjust_parser.add_argument('--start-date', help='开始日期，格式：YYYY-MM-DD')
     adjust_parser.add_argument('--end-date', help='结束日期，格式：YYYY-MM-DD')
+
+    # 整合命令：清理（含ST）+ 更新日线 + 更新复权
+    combo_parser = subparsers.add_parser(
+        'cleanup-and-update-daily-adjust',
+        help='先清理股票池（含ST），再更新日线与复权因子'
+    )
+    combo_parser.add_argument('--code', help='股票代码，如不指定则更新所有股票')
+    combo_parser.add_argument('--file', help='包含股票代码的文件路径')
+    combo_parser.add_argument('--start-date', help='开始日期，格式：YYYY-MM-DD')
+    combo_parser.add_argument('--end-date', help='结束日期，格式：YYYY-MM-DD')
     
     # 初始化命令
     init_parser = subparsers.add_parser('init', help='初始化数据库')
@@ -233,6 +255,8 @@ def main():
             update_hourly_data(args.code, args.file, args.start_date, args.end_date)
         elif args.command == 'update-adjust-factor':
             update_adjust_factor(args.code, args.file, args.start_date, args.end_date)
+        elif args.command == 'cleanup-and-update-daily-adjust':
+            cleanup_and_update_daily_adjust(args.code, args.file, args.start_date, args.end_date)
         elif args.command == 'init':
             setup_indexes()
             logger.info("数据库初始化完成")

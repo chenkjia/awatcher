@@ -74,18 +74,29 @@ class StockProcessor:
         """
         清理不需要的标的:
         1) 科创板: sh.688xxx
-        2) 指数/基金等非股票类型（兼容历史数据中 market 被误存为 type 的情况）
+        2) 北交所: bj.xxx
+        3) ST/*ST 股票
+        4) 指数/基金等非股票类型（兼容历史数据中 market 被误存为 type 的情况）
         """
         try:
+            baostock_client = BaostockClient()
+            excluded_codes = baostock_client.get_excluded_stock_codes()
+            deleted_by_codes = StockModel.delete_stocks_by_codes(excluded_codes)
+
             cleanup_query = {
                 '$or': [
                     {'code': {'$regex': '^sh\\.688'}},
+                    {'code': {'$regex': '^bj\\.'}},
+                    {'name': {'$regex': '^(\\*?ST|S\\*ST|SST)', '$options': 'i'}},
                     {'securityType': {'$exists': True, '$ne': '1'}},
                     {'securityType': {'$exists': False}, 'market': {'$in': ['2', '3', '4', '5', '6', '7', '8', '9']}}
                 ]
             }
-            deleted_count = StockModel.delete_stocks_by_query(cleanup_query)
-            logger.info(f"清理完成，删除 {deleted_count} 条科创板/指数/基金等非目标股票数据")
+            deleted_by_query = StockModel.delete_stocks_by_query(cleanup_query)
+            deleted_count = deleted_by_codes + deleted_by_query
+            logger.info(
+                f"清理完成，按快照代码删除 {deleted_by_codes} 条，按规则补删 {deleted_by_query} 条，合计 {deleted_count} 条"
+            )
             return deleted_count
         except Exception as e:
             logger.error(f"清理不需要的股票数据失败: {e}")
