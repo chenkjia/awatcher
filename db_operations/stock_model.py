@@ -25,6 +25,8 @@ class StockModel:
             ('focusedDays', 1),
             ('hourFocusedDays', 1),
             ('isStar', 1),
+            ('adjustFactorSyncAt', 1),
+            ('adjustFactorLatestDate', 1),
             ('dayLine.time', 1),
             ('hourLine.time', 1)
         ]
@@ -189,6 +191,20 @@ class StockModel:
             {'$set': {'adjustFactor': adjust_factor_list}}
         )
         logger.debug(f"批量更新股票 {code} 的复权因子数据，共 {len(adjust_factor_list)} 条")
+
+    @classmethod
+    def update_adjust_factor_sync_info(cls, code, sync_time, latest_date=None):
+        """更新复权因子同步信息"""
+        mongo_client = MongoClient()
+        update_fields = {'adjustFactorSyncAt': sync_time}
+        if latest_date is not None:
+            update_fields['adjustFactorLatestDate'] = latest_date
+        mongo_client.update_one(
+            cls.COLLECTION_NAME,
+            {'code': code},
+            {'$set': update_fields}
+        )
+        logger.debug(f"更新股票 {code} 的复权同步信息: {update_fields}")
     
     @classmethod
     def get_stock_by_code(cls, code):

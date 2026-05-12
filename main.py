@@ -157,7 +157,9 @@ def update_adjust_factor(code=None, file_path=None, start_date=None, end_date=No
             # 从文件更新股票列表
             codes = get_codes_from_file(file_path)
             total_count = 0
-            for stock_code in codes:
+            total_stocks = len(codes)
+            for index, stock_code in enumerate(codes, start=1):
+                logger.info(f"复权因子更新进度 [{index}/{total_stocks}] 开始处理 {stock_code}")
                 count = StockProcessor.process_adjust_factor(stock_code, start_date, end_date)
                 total_count += count
             logger.info(f"指定列表股票复权因子数据更新完成，共处理 {total_count} 条记录")
@@ -165,7 +167,9 @@ def update_adjust_factor(code=None, file_path=None, start_date=None, end_date=No
             # 更新所有股票
             stocks = StockModel.get_all_stocks(projection={'code': 1})
             total_count = 0
-            for stock in stocks:
+            total_stocks = len(stocks)
+            for index, stock in enumerate(stocks, start=1):
+                logger.info(f"复权因子更新进度 [{index}/{total_stocks}] 开始处理 {stock['code']}")
                 count = StockProcessor.process_adjust_factor(stock['code'], start_date, end_date)
                 total_count += count
             logger.info(f"所有股票复权因子数据更新完成，共处理 {total_count} 条记录")
