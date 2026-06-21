@@ -28,6 +28,7 @@ class StockModel:
             ('adjustFactorSyncAt', 1),
             ('adjustFactorLatestDate', 1),
             ('dayLine.time', 1),
+            ('dayLine.peTTM', 1),
             ('hourLine.time', 1)
         ]
         

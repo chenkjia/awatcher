@@ -122,11 +122,11 @@ class StockProcessor:
                 # 获取最后一条日线数据的日期
                 last_date = stock['dayLine'][-1]['time']
                 last_date_str = last_date.strftime('%Y-%m-%d')
-                if last_date_str >= end_date:
+                if last_date_str > end_date:
                     logger.info(f"股票 {code} 的日线最后日期为 {last_date_str}，已是最新，无需拉取")
                     return 0
                 start_date = (last_date).strftime('%Y-%m-%d')
-                logger.info(f"从最后一条日线数据日期 {last_date.strftime('%Y-%m-%d')} 后开始获取新数据")
+                logger.info(f"从最后一条日线数据日期 {last_date_str} 开始获取（含刷新）新数据")
 
             # 如果开始日期大于结束日期，则此股票已是最新数据
             if start_date and end_date and start_date > end_date:
@@ -184,11 +184,11 @@ class StockProcessor:
                 # 获取最后一条小时线数据的日期
                 last_date = stock['hourLine'][-1]['time']
                 last_date_str = last_date.strftime('%Y-%m-%d')
-                if last_date_str >= end_date:
+                if last_date_str > end_date:
                     logger.info(f"股票 {code} 的小时线最后日期为 {last_date_str}，已是最新，无需拉取")
                     return 0
                 start_date = (last_date).strftime('%Y-%m-%d')
-                logger.info(f"从最后一条小时线数据日期 {last_date.strftime('%Y-%m-%d')} 后开始获取新数据")
+                logger.info(f"从最后一条小时线数据日期 {last_date_str} 开始获取（含刷新）新数据")
 
             # 如果开始日期大于结束日期，则此股票已是最新数据
             if start_date and end_date and start_date > end_date:
@@ -246,39 +246,38 @@ class StockProcessor:
             if not end_date:
                 end_date = sync_time.strftime('%Y-%m-%d')
 
-            # 未指定时间范围时，优先按最后一条复权日期做增量同步
-            query_start_date = start_date
-            latest_existing_factor_date = stock.get('adjustFactorLatestDate')
-            if latest_existing_factor_date is None and stock.get('adjustFactor'):
-                latest_existing_factor_date = stock['adjustFactor'][-1]['time']
-
-            if not query_start_date and latest_existing_factor_date:
-                latest_existing_factor_str = latest_existing_factor_date.strftime('%Y-%m-%d')
-                next_query_date = latest_existing_factor_date + timedelta(days=1)
-                next_query_date_str = next_query_date.strftime('%Y-%m-%d')
-                if next_query_date_str > end_date:
-                    StockModel.update_adjust_factor_sync_info(code, sync_time, latest_existing_factor_date)
-                    logger.info(f"股票 {code} 的复权因子最新日期为 {latest_existing_factor_str}，无需更新")
-                    return 0
-                query_start_date = next_query_date_str
-                logger.info(
-                    f"股票 {code} 的复权因子从最后日期 {latest_existing_factor_str} 之后开始增量获取"
-                )
+            # 确定查询开始日期
+            # 1. 如果用户指定了 start_date，则使用用户指定的范围
+            # 2. 如果未指定，则执行“全量获取”（从 1990 年开始），以确保复权因子回溯调整的正确性
+            if start_date:
+                query_start_date = start_date
+                logger.info(f"股票 {code} 按指定范围获取复权因子: {query_start_date} 至 {end_date}")
+            else:
+                query_start_date = "1990-01-01"
+                logger.info(f"股票 {code} 执行全量复权因子同步 (1990-01-01 至 {end_date})")
 
             # 获取股票复权因子数据
             baostock_client = BaostockClient()
             adjust_factor_data = baostock_client.get_adjust_factor(code, query_start_date, end_date)
 
             updated_count = 0
-            latest_factor_date = latest_existing_factor_date
+            latest_factor_date = None
             if adjust_factor_data:
-                for factor_data in adjust_factor_data:
-                    StockModel.update_adjust_factor(code, factor_data)
+                if not start_date:
+                    # 全量同步：直接覆盖，效率高且保证历史因子一致性
+                    StockModel.batch_update_adjust_factor(code, adjust_factor_data)
+                else:
+                    # 指定范围：逐条更新
+                    for factor_data in adjust_factor_data:
+                        StockModel.update_adjust_factor(code, factor_data)
+                
                 updated_count = len(adjust_factor_data)
                 latest_factor_date = adjust_factor_data[-1]['time']
-                logger.info(f"成功增量更新股票 {code} 的 {updated_count} 条复权因子数据")
+                logger.info(f"成功处理股票 {code} 的 {updated_count} 条复权因子数据")
             else:
-                logger.info(f"股票 {code} 未获取到复权因子数据")
+                logger.info(f"股票 {code} 未获取到新的复权因子数据")
+                if start_date:
+                    latest_factor_date = stock.get('adjustFactorLatestDate')
 
             StockModel.update_adjust_factor_sync_info(code, sync_time, latest_factor_date)
             return updated_count

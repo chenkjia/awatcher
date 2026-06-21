@@ -193,7 +193,7 @@ class BaostockClient:
         # 查询日K线数据
         rs = bs.query_history_k_data_plus(
             code,
-            "date,open,high,low,close,volume,amount,turn",
+            "date,open,high,low,close,volume,amount,turn,peTTM",
             start_date=start_date,
             end_date=end_date,
             frequency="d",
@@ -215,7 +215,8 @@ class BaostockClient:
                 'close': float(data[4]) if data[4] else 0,
                 'volume': float(data[5]) if data[5] else 0,
                 'amount': float(data[6]) if data[6] else 0,
-                'turn': float(data[7]) if data[7] else 0  # 换手率
+                'turn': float(data[7]) if data[7] else 0,  # 换手率
+                'peTTM': float(data[8]) if data[8] and data[8] != "" else 0
             }
             daily_data.append(k_data)
         
